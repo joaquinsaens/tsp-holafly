@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HolaFly - Optimizador TSP Avanzado</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <!-- PANTALLA DE BIENVENIDA -->
+    <div id="pantallaBienvenida" class="welcome-screen">
+        <h1 class="titulo-grande">HolaFly</h1>
+        <p class="subtitulo-bienvenida">Resolución del Problema del Agente Viajero mediante Evaluación de Ciclos Hamiltonianos por Fuerza Bruta</p>
+        <button class="btn-comenzar" onclick="irAlSistema()">Comenzar Asistente</button>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL CON ASISTENTE PASO A PASO -->
+    <div id="pantallaPrincipal" class="container" style="display: none;">
+        
+        <div class="wizard-header">
+            <h2 class="titulo-seccion">Configuración del Grafo TSP</h2>
+            <p class="subtitulo">Completa los siguientes pasos para configurar y ejecutar el análisis.</p>
+            
+            <!-- BARRA DE PROGRESO DEL STEPPER -->
+            <div class="stepper-progress-bar">
+                <div class="stepper-step active" id="stepIndicator1" onclick="navegarDirectoPaso(1)">
+                    <div class="step-circle">1</div>
+                    <span class="step-label">Nodos</span>
+                </div>
+                <div class="stepper-line" id="stepLine1"></div>
+                <div class="stepper-step" id="stepIndicator2" onclick="navegarDirectoPaso(2)">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">Nombres</span>
+                </div>
+                <div class="stepper-line" id="stepLine2"></div>
+                <div class="stepper-step" id="stepIndicator3" onclick="navegarDirectoPaso(3)">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">Distancias</span>
+                </div>
+                <div class="stepper-line" id="stepLine3"></div>
+                <div class="stepper-step" id="stepIndicator4" onclick="navegarDirectoPaso(4)">
+                    <div class="step-circle">4</div>
+                    <span class="step-label">Resumen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE PASOS -->
+        <div class="wizard-content">
+            
+            <!-- PASO 1: CANTIDAD DE NODOS -->
+            <div class="step-pane active" id="stepPane1">
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <span class="badge-paso">Paso 1</span>
+                        <h3>Cantidad de Nodos o Aeropuertos</h3>
+                        <p class="step-desc">Selecciona cuántos vértices tendrá tu grafo completo (entre 5 y 10):</p>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="button-group-nodos" id="grupoNodos">
+                            <button type="button" class="btn-opcion-nodo active" onclick="seleccionarNodos(5)">5 Nodos</button>
+                            <button type="button" class="btn-opcion-nodo" onclick="seleccionarNodos(6)">6 Nodos</button>
+                            <button type="button" class="btn-opcion-nodo" onclick="seleccionarNodos(7)">7 Nodos</button>
+                            <button type="button" class="btn-opcion-nodo" onclick="seleccionarNodos(8)">8 Nodos</button>
+                            <button type="button" class="btn-opcion-nodo" onclick="seleccionarNodos(9)">9 Nodos</button>
+                            <button type="button" class="btn-opcion-nodo" onclick="seleccionarNodos(10)">10 Nodos</button>
+                        </div>
+                        <input type="hidden" id="numNodos" value="5">
+                    </div>
+
+                    <div class="formula-box">
+                        <div class="formula-header">
+                            <span class="formula-badge">Fundamento Teórico</span>
+                            <p class="formula-titulo">Recuerda que para hacer los cálculos del ciclo hamiltoniano usaremos esta fórmula:</p>
+                        </div>
+                        <div class="formula-display">
+                            <div class="math-card">
+                                <div class="math-fraction">
+                                    <span class="math-numerador">(<i>n</i> &minus; 1)!</span>
+                                    <span class="math-divisor"></span>
+                                    <span class="math-denominador">2</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="formula-evaluacion">
+                            Para <b><i>n</i> = <span id="txtInfoNodos">5</span></b> nodos &rarr; evaluaremos <b><span id="txtInfoCiclos">12</span> ciclos hamiltonianos únicos</b>.
+                        </div>
+                    </div>
+
+                    <div class="wizard-nav-buttons">
+                        <div></div>
+                        <button type="button" class="btn-wizard-next" onclick="siguientePaso(2)">Siguiente: Asignar Nombres &rarr;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 2: NOMBRES DE NODOS -->
+            <div class="step-pane" id="stepPane2">
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <span class="badge-paso">Paso 2</span>
+                        <h3>Nombres e Identificación de los Aeropuertos</h3>
+                        <p class="step-desc">Personaliza el nombre de cada nodo si lo deseas, o déjalos con su identificador por defecto:</p>
+                    </div>
+
+                    <div class="form-group">
+                        <div id="contenedorNombres" class="grid-nombres"></div>
+                    </div>
+
+                    <div class="wizard-nav-buttons">
+                        <button type="button" class="btn-wizard-prev" onclick="anteriorPaso(1)">&larr; Atrás</button>
+                        <button type="button" class="btn-wizard-next" onclick="siguientePaso(3)">Siguiente: Definir Distancias &rarr;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 3: MÉTODO Y DISTANCIAS -->
+            <div class="step-pane" id="stepPane3">
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <span class="badge-paso">Paso 3</span>
+                        <h3>Método de Generación de Distancias</h3>
+                        <p class="step-desc">Elige si deseas que las distancias se generen aleatoriamente o ingresarlas de forma personalizada:</p>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="button-group-modo" id="grupoModo">
+                            <button type="button" class="btn-opcion-modo active" id="btnModoAleatorio"
+                                onclick="seleccionarModo('aleatorio')">Generación Aleatoria</button>
+                            <!-- <button type="button" class="btn-opcion-modo" id="btnModoManual"
+                                onclick="seleccionarModo('manual')">Ingreso Manual de Distancias</button> -->
+                            <button type="button" class="btn-opcion-modo btn-pendiente" id="btnModoPendiente"
+                                onclick="mostrarPendiente()">Ingreso Manual de Distancias Pendientes</button>
+                        </div>
+                        <input type="hidden" id="modoGeneracion" value="aleatorio">
+                    </div>
+
+                    <div id="contenedorManual" class="manual-box" style="display: none;">
+                        <div class="manual-header">
+                            <h4>Definición Manual de Distancias entre Aeropuertos</h4>
+                            <p class="manual-subtitulo">Ingresa la distancia entre cada par de aeropuertos / nodos:</p>
+                        </div>
+                        <div id="inputsMatrizManual" class="grid-aristas"></div>
+                    </div>
+
+                    <div class="wizard-nav-buttons">
+                        <button type="button" class="btn-wizard-prev" onclick="anteriorPaso(2)">&larr; Atrás</button>
+                        <button type="button" class="btn-wizard-next" onclick="siguientePaso(4)">Siguiente: Revisar Resumen &rarr;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 4: RESUMEN Y EJECUCIÓN -->
+            <div class="step-pane" id="stepPane4">
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <span class="badge-paso">Paso 4</span>
+                        <h3>Resumen de Configuración y Ejecución</h3>
+                        <p class="step-desc">Verifica la configuración de tu grafo antes de iniciar el cálculo por fuerza bruta:</p>
+                    </div>
+
+                    <div class="resumen-container">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Total de Nodos:</span>
+                            <span class="resumen-valor" id="resumenCantNodos">5</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="resumen-label">Ciclos a Evaluar:</span>
+                            <span class="resumen-valor" id="resumenCantCiclos">24</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="resumen-label">Modo de Distancias:</span>
+                            <span class="resumen-valor" id="resumenModo">Aleatorio</span>
+                        </div>
+                        <div class="resumen-item-full">
+                            <span class="resumen-label">Aeropuertos / Nodos Configurados:</span>
+                            <div class="resumen-tags" id="resumenListaNombres"></div>
+                        </div>
+                    </div>
+
+                    <div class="resumen-explicacion-box">
+                        <div class="explicacion-header">
+                            <span class="explicacion-badge">Fundamento del Algoritmo</span>
+                        </div>
+                        <p class="explicacion-texto">
+                            El algoritmo de fuerza bruta ayuda a probar todas las posibles combinaciones o soluciones posibles de forma sistemática hasta encontrar la respuesta correcta o, en este caso, la ruta óptima (la de menor recorrido).
+                        </p>
+                    </div>
+
+                    <div class="wizard-nav-buttons">
+                        <button type="button" class="btn-wizard-prev" onclick="anteriorPaso(3)">&larr; Atrás</button>
+                        <button type="button" class="btn-principal-ejecutar" onclick="ejecutarTSP()">
+                            Ejecutar Análisis y Fuerza Bruta
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SECCIÓN DE RESULTADOS -->
+        <div id="seccionResultado" class="resultado-card" style="display: none;">
+            
+            <div class="resultado-top-bar">
+                <h3>Resultados del Análisis TSP</h3>
+                <button type="button" class="btn-reconfigurar" onclick="volverAConfiguracion()">Modificar Configuración</button>
+            </div>
+
+            <!-- TARJETA FINAL DE SOLUCIÓN ÓPTIMA RESALTADA -->
+            <div class="tarjeta-solucion-final" id="tarjetaSolucionFinal">
+                <div class="solucion-header">
+                    <span class="solucion-badge" id="badgeTituloSolucion">Solución Óptima</span>
+                </div>
+                <div class="solucion-grid">
+                    <div class="solucion-stat-card">
+                        <span class="solucion-stat-label">Ciclos Evaluados</span>
+                        <span class="solucion-stat-valor" id="txtCiclosFinal">-</span>
+                    </div>
+                    <div class="solucion-stat-card">
+                        <span class="solucion-stat-label">Distancia Mínima Óptima</span>
+                        <span class="solucion-stat-valor" id="txtDistanciaFinal">-</span>
+                    </div>
+                    <div class="solucion-stat-card" id="cardCantOptimas" style="display: none; grid-column: 1 / -1;">
+                        <span class="solucion-stat-label">Rutas Óptimas Encontradas (Empates con Distancia Mínima)</span>
+                        <span class="solucion-stat-valor" id="txtCantOptimasFinal">-</span>
+                    </div>
+                </div>
+                <div class="solucion-ruta-caja">
+                    <div class="solucion-ruta-header-row">
+                        <span class="solucion-ruta-label" id="labelRutaOptima">Recorrido del Ciclo Hamiltoniano Óptimo:</span>
+                        <select id="comboRutasOptimas" class="combo-optimas" style="display: none;" onchange="cambiarRutaOptimaSeleccionada(this.value)"></select>
+                    </div>
+                    <div class="solucion-ruta-texto" id="txtRutaOptimaFinal">-</div>
+                </div>
+                <button type="button" class="btn-resaltar-optimo" onclick="resaltarRutaOptimaActual()">Resaltar Ruta Óptima en el Grafo</button>
+            </div>
+
+            <!-- VISUALIZACIÓN DEL GRAFO Y PASO A PASO -->
+            <h3 style="margin-top: 25px;">Visualización del Grafo y Evaluación Paso a Paso</h3>
+            <div class="canvas-wrapper">
+                <canvas id="grafoCanvas" width="650" height="420"></canvas>
+            </div>
+
+            <div class="panel-pasos">
+                <div class="controles-pasos">
+                    <button type="button" class="btn-ctrl" onclick="irAlPaso(0)">|&lt;&lt; Inicio</button>
+                    <button type="button" class="btn-ctrl" onclick="irAlPaso(pasoActual - 1)">&lt; Anterior</button>
+                    <button type="button" class="btn-ctrl btn-primary" id="btnAutoPlay" onclick="toggleAutoPlay()">Reproducir Auto</button>
+                    <button type="button" class="btn-ctrl" onclick="irAlPaso(pasoActual + 1)">Siguiente &gt;</button>
+                    <button type="button" class="btn-ctrl" onclick="irAlPaso(historialGlobal.length - 1)">Final &gt;&gt;|</button>
+                    <button type="button" class="btn-ctrl btn-optimo" onclick="resaltarRutaOptimaActual()">Ver Ruta Óptima</button>
+                </div>
+
+                <div class="barra-progreso-pasos">
+                    <input type="range" id="sliderPasos" min="0" max="0" value="0" oninput="irAlPaso(parseInt(this.value))">
+                    <span class="contador-pasos" id="txtContadorPasos">Paso 1 de 1</span>
+                </div>
+
+                <div id="cajaEvaluacion" class="caja-evaluacion-paso">
+                    <div class="eval-titulo" id="txtEvalTitulo">Estado del Paso</div>
+                    <div class="eval-ruta" id="txtEvalRuta">-</div>
+                    <div class="eval-detalle" id="txtEvalDetalle">-</div>
+                </div>
+            </div>
+
+            <!-- MATRIZ DE ADYACENCIA Y DISTANCIAS -->
+            <h3 style="margin-top: 30px;">Matriz de Adyacencia y Distancias</h3>
+            <div class="tabla-matriz-wrapper">
+                <table class="tabla-matriz" id="tablaMatriz"></table>
+            </div>
+
+            <!-- LISTADO COMPLETO DE CICLOS HAMILTONIANOS -->
+            <h3 style="margin-top: 30px;">Ciclos Hamiltonianos Evaluados</h3>
+            <p class="subtitulo" style="margin-bottom: 10px;">Listado de todas las rutas candidatas evaluadas durante la fuerza bruta:</p>
+            <div class="historial-caja" id="txtHistorial"></div>
+
+        </div>
+    </div>
+
+    <script>
+        let datosResultado = null;
+        let historialGlobal = [];
+        let pasoActual = 0;
+        let timerAutoPlay = null;
+        let nodosNombresGlobal = [];
+        let pasoWizardActual = 1;
+
+        function factorial(num) {
+            let rval = 1;
+            for (let i = 2; i <= num; i++) rval = rval * i;
+            return rval;
+        }
+
+        function irAlSistema() {
+            const bienv = document.getElementById('pantallaBienvenida');
+            const princ = document.getElementById('pantallaPrincipal');
+            
+            bienv.classList.add('fade-out-center');
+            setTimeout(() => {
+                bienv.style.display = 'none';
+                princ.style.display = 'block';
+                princ.classList.add('fade-in-center');
+                actualizarInterfaz();
+                mostrarPasoWizard(1);
+            }, 290);
+        }
+
+        function mostrarPasoWizard(paso) {
+            pasoWizardActual = paso;
+
+            // Ocultar todos los panes
+            for (let i = 1; i <= 4; i++) {
+                const pane = document.getElementById(`stepPane${i}`);
+                if (pane) pane.classList.toggle('active', i === paso);
+
+                const ind = document.getElementById(`stepIndicator${i}`);
+                if (ind) {
+                    ind.classList.toggle('active', i === paso);
+                    ind.classList.toggle('completed', i < paso);
+                }
+
+                if (i < 4) {
+                    const line = document.getElementById(`stepLine${i}`);
+                    if (line) line.classList.toggle('completed', i < paso);
+                }
+            }
+
+            if (paso === 4) {
+                actualizarResumen();
+            }
+        }
+
+        function siguientePaso(pasoDestino) {
+            mostrarPasoWizard(pasoDestino);
+        }
+
+        function anteriorPaso(pasoDestino) {
+            mostrarPasoWizard(pasoDestino);
+        }
+
+        function navegarDirectoPaso(paso) {
+            mostrarPasoWizard(paso);
+        }
+
+        function volverAConfiguracion() {
+            detenerAutoPlay();
+            document.getElementById('seccionResultado').style.display = 'none';
+            document.querySelector('.wizard-header').style.display = 'block';
+            document.querySelector('.wizard-content').style.display = 'block';
+            mostrarPasoWizard(1);
+        }
+
+        function seleccionarNodos(n) {
+            document.getElementById('numNodos').value = n;
+            document.querySelectorAll('.btn-opcion-nodo').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.innerText) === n);
+            });
+            document.getElementById('txtInfoNodos').innerText = n;
+            document.getElementById('txtInfoCiclos').innerText = (factorial(n - 1) / 2).toLocaleString('es');
+            actualizarInterfaz();
+        }
+
+        function seleccionarModo(modo) {
+            document.getElementById('modoGeneracion').value = modo;
+            document.getElementById('btnModoAleatorio').classList.toggle('active', modo === 'aleatorio');
+            document.getElementById('btnModoManual').classList.toggle('active', modo === 'manual');
+            actualizarInterfaz();
+        }
+        function mostrarPendiente() {
+            let aviso = document.getElementById('avisoPendiente');
+            if (!aviso) {
+                aviso = document.createElement('div');
+                aviso.id = 'avisoPendiente';
+                aviso.className = 'aviso-pendiente';
+                aviso.innerHTML = '<span class="icono"></span><span>Pendiente de implementar</span>';
+                document.body.appendChild(aviso);
+            }
+            aviso.classList.add('visible');
+            clearTimeout(aviso._timer);
+            aviso._timer = setTimeout(() => aviso.classList.remove('visible'), 2500);
+        }
+
+        function actualizarInterfaz() {
+            const n = parseInt(document.getElementById('numNodos').value);
+            const modo = document.getElementById('modoGeneracion').value;
+
+            const contenedorNombres = document.getElementById('contenedorNombres');
+            const valoresPrevios = {};
+            for (let i = 0; i < 10; i++) {
+                const inputExistente = document.getElementById(`nombre_${i}`);
+                if (inputExistente) {
+                    valoresPrevios[i] = inputExistente.value;
+                }
+            }
+
+            contenedorNombres.innerHTML = '';
+            for (let i = 0; i < n; i++) {
+                let letra = String.fromCharCode(65 + i);
+                let valDefault = valoresPrevios[i] || 'Aeropuerto';
+                contenedorNombres.innerHTML += `
+                    <div class="input-nodo-wrapper">
+                        <span class="badge-letra-fija">${letra}</span>
+                        <input type="text" id="nombre_${i}" value="${valDefault}" placeholder="Nombre del aeropuerto">
+                    </div>
+                `;
+            }
+
+            const contenedorManual = document.getElementById('contenedorManual');
+            const inputsMatrizManual = document.getElementById('inputsMatrizManual');
+
+            if (modo === 'manual') {
+                contenedorManual.style.display = 'block';
+                inputsMatrizManual.innerHTML = '';
+                for (let i = 0; i < n; i++) {
+                    for (let j = i + 1; j < n; j++) {
+                        let letraI = String.fromCharCode(65 + i);
+                        let letraJ = String.fromCharCode(65 + j);
+                        inputsMatrizManual.innerHTML += `
+                            <div class="input-arista-card">
+                                <span class="nodo-par-label">${letraI} - ${letraJ}</span>
+                                <input type="number" id="peso_${i}_${j}" value="10" min="1" step="1" onkeydown="if(event.key==='.'||event.key==='-'||event.key==='+'||event.key==='e'||event.key==='E'||event.key===',') event.preventDefault();">
+                            </div>
+                        `;
+                    }
+                }
+            } else {
+                contenedorManual.style.display = 'none';
+            }
+        }
+
+        function actualizarResumen() {
+            const n = parseInt(document.getElementById('numNodos').value);
+            const modo = document.getElementById('modoGeneracion').value;
+
+            document.getElementById('resumenCantNodos').innerText = `${n} nodos`;
+            document.getElementById('resumenCantCiclos').innerText = `${(factorial(n - 1) / 2).toLocaleString('es')} ciclos Hamiltonianos únicos`;
+            document.getElementById('resumenModo').innerText = (modo === 'aleatorio') ? 'Aleatorio' : 'Manual (Personalizado)';
+
+            const listaNombresDiv = document.getElementById('resumenListaNombres');
+            listaNombresDiv.innerHTML = '';
+
+            for (let i = 0; i < n; i++) {
+                let letra = String.fromCharCode(65 + i);
+                let txt = document.getElementById(`nombre_${i}`) ? document.getElementById(`nombre_${i}`).value.trim() : '';
+                let labelFinal = (!txt || txt === 'Aeropuerto') ? `Nodo ${letra}` : `${letra}: ${txt}`;
+                listaNombresDiv.innerHTML += `<span class="resumen-tag">${labelFinal}</span>`;
+            }
+        }
+
+        function dibujarGrafo(nombres, matriz, rutaActivaIndices, esOptimoFinal = false) {
+            const canvas = document.getElementById('grafoCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const N = nombres.length;
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const R = Math.min(cx, cy) - 55;
+            const posiciones = [];
+
+            for (let i = 0; i < N; i++) {
+                const angulo = (2 * Math.PI * i / N) - (Math.PI / 2);
+                posiciones.push({
+                    x: cx + R * Math.cos(angulo),
+                    y: cy + R * Math.sin(angulo)
+                });
+            }
+
+            // 1. Dibujar todas las aristas no dirigidas y sus pesos
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#e2e8f0';
+            for (let i = 0; i < N; i++) {
+                for (let j = i + 1; j < N; j++) {
+                    ctx.beginPath();
+                    ctx.moveTo(posiciones[i].x, posiciones[i].y);
+                    ctx.lineTo(posiciones[j].x, posiciones[j].y);
+                    ctx.stroke();
+
+                    const mx = (posiciones[i].x + posiciones[j].x) / 2;
+                    const my = (posiciones[i].y + posiciones[j].y) / 2;
+                    const peso = matriz[i][j];
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 12, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#475569';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(peso, mx, my);
+                }
+            }
+
+            // 2. Dibujar la ruta evaluada activa o ruta óptima
+            if (rutaActivaIndices && rutaActivaIndices.length > 1) {
+                ctx.lineWidth = esOptimoFinal ? 4.5 : 3.5;
+                ctx.strokeStyle = esOptimoFinal ? '#059669' : '#0284c7';
+                ctx.beginPath();
+                for (let k = 0; k < rutaActivaIndices.length - 1; k++) {
+                    const u = rutaActivaIndices[k];
+                    const v = rutaActivaIndices[k + 1];
+                    if (u !== undefined && v !== undefined && posiciones[u] && posiciones[v]) {
+                        ctx.moveTo(posiciones[u].x, posiciones[u].y);
+                        ctx.lineTo(posiciones[v].x, posiciones[v].y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // 3. Dibujar los nodos
+            for (let i = 0; i < N; i++) {
+                const pos = posiciones[i];
+                const esInicio = (i === 0);
+
+                ctx.shadowColor = esOptimoFinal ? 'rgba(5, 150, 105, 0.3)' : 'rgba(0, 0, 0, 0.15)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 2;
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 22, 0, 2 * Math.PI);
+                ctx.fillStyle = esOptimoFinal ? '#059669' : (esInicio ? '#0284c7' : '#2563eb');
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.shadowColor = 'transparent';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let letra = String.fromCharCode(65 + i);
+                ctx.fillText(letra, pos.x, pos.y);
+            }
+        }
+
+        function renderizarMatriz(matriz, nombres) {
+            const tabla = document.getElementById('tablaMatriz');
+            let html = '<thead><tr><th>Nodo</th>';
+            nombres.forEach(n => {
+                html += `<th>${n}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            for (let i = 0; i < nombres.length; i++) {
+                html += `<tr><th>${nombres[i]}</th>`;
+                for (let j = 0; j < nombres.length; j++) {
+                    const esDiag = (i === j);
+                    html += `<td class="${esDiag ? 'diagonal' : ''}">${matriz[i][j]}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody>';
+            tabla.innerHTML = html;
+        }
+
+        function irAlPaso(index) {
+            if (!historialGlobal || historialGlobal.length === 0) return;
+            if (index < 0) index = 0;
+            if (index >= historialGlobal.length) {
+                index = historialGlobal.length - 1;
+                detenerAutoPlay();
+            }
+
+            pasoActual = index;
+            document.getElementById('sliderPasos').value = pasoActual;
+            document.getElementById('txtContadorPasos').innerText = `Paso ${pasoActual + 1} de ${historialGlobal.length}`;
+
+            const item = historialGlobal[pasoActual];
+            const rutaNombres = item.ciclo.split(' -> ');
+            const rutaIndices = rutaNombres.map(name => nodosNombresGlobal.indexOf(name));
+            const distItem = (item.distancia !== undefined) ? item.distancia : item.costo;
+
+            let mejorHastaAhora = Infinity;
+            for (let k = 0; k <= pasoActual; k++) {
+                const d = (historialGlobal[k].distancia !== undefined) ? historialGlobal[k].distancia : historialGlobal[k].costo;
+                if (d < mejorHastaAhora) {
+                    mejorHastaAhora = d;
+                }
+            }
+
+            const esNuevoOptimo = (distItem === mejorHastaAhora);
+            const cajaEval = document.getElementById('cajaEvaluacion');
+            cajaEval.className = 'caja-evaluacion-paso ' + (esNuevoOptimo ? 'estado-optimo' : 'estado-descartado');
+
+            document.getElementById('txtEvalTitulo').innerText = esNuevoOptimo
+                ? 'Ruta Candidata - Nueva Menor Distancia Registrada'
+                : 'Ruta Candidata - Descartada (Mayor Distancia)';
+
+            document.getElementById('txtEvalRuta').innerText = `Ruta: [${item.ciclo}]`;
+            document.getElementById('txtEvalDetalle').innerText = esNuevoOptimo
+                ? `Distancia: ${distItem}. Es la ruta más corta encontrada hasta este momento.`
+                : `Distancia: ${distItem}. Supera la mejor distancia registrada hasta ahora (${mejorHastaAhora}).`;
+
+            dibujarGrafo(nodosNombresGlobal, datosResultado.matriz, rutaIndices, false);
+        }
+
+        let rutaOptimaSeleccionadaIndice = 0;
+
+        function cambiarRutaOptimaSeleccionada(indiceStr) {
+            const idx = parseInt(indiceStr);
+            rutaOptimaSeleccionadaIndice = idx;
+            if (datosResultado && datosResultado.rutas_optimas && datosResultado.rutas_optimas[idx]) {
+                document.getElementById('txtRutaOptimaFinal').innerText = datosResultado.rutas_optimas[idx];
+                resaltarRutaOptimaActual();
+            }
+        }
+
+        function resaltarRutaOptimaActual() {
+            if (!datosResultado || !historialGlobal.length) return;
+            detenerAutoPlay();
+
+            const listaOptimas = datosResultado.rutas_optimas || [datosResultado.ruta_optima];
+            const rutaTexto = listaOptimas[rutaOptimaSeleccionadaIndice] || listaOptimas[0];
+
+            let indiceEnHistorial = 0;
+            for (let i = 0; i < historialGlobal.length; i++) {
+                if (historialGlobal[i].ciclo === rutaTexto) {
+                    indiceEnHistorial = i;
+                    break;
+                }
+            }
+
+            pasoActual = indiceEnHistorial;
+            document.getElementById('sliderPasos').value = pasoActual;
+            document.getElementById('txtContadorPasos').innerText = `Paso ${pasoActual + 1} de ${historialGlobal.length} (Ruta Óptima)`;
+
+            const cantOptimas = datosResultado.cantidad_optimas || 1;
+            const cajaEval = document.getElementById('cajaEvaluacion');
+            cajaEval.className = 'caja-evaluacion-paso estado-optimo';
+            
+            document.getElementById('txtEvalTitulo').innerText = (cantOptimas > 1)
+                ? `SOLUCIÓN ÓPTIMA (${rutaOptimaSeleccionadaIndice + 1} DE ${cantOptimas} RUTAS EMPATADAS)`
+                : 'SOLUCIÓN ÓPTIMA FINAL (MENOR DISTANCIA GLOBAL)';
+                
+            document.getElementById('txtEvalRuta').innerText = `Ruta: [${rutaTexto}]`;
+            document.getElementById('txtEvalDetalle').innerText = (cantOptimas > 1)
+                ? `Distancia mínima: ${datosResultado.distancia_minima}. Existen ${cantOptimas} rutas diferentes que logran esta misma distancia óptima.`
+                : `Distancia mínima global: ${datosResultado.distancia_minima}. Representa el ciclo hamiltoniano óptimo encontrado por fuerza bruta.`;
+
+            const rutaNombres = rutaTexto.split(' -> ');
+            const rutaIndices = rutaNombres.map(name => nodosNombresGlobal.indexOf(name));
+            dibujarGrafo(nodosNombresGlobal, datosResultado.matriz, rutaIndices, true);
+
+            document.getElementById('grafoCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function toggleAutoPlay() {
+            if (timerAutoPlay) {
+                detenerAutoPlay();
+            } else {
+                if (pasoActual >= historialGlobal.length - 1) {
+                    pasoActual = 0;
+                }
+                document.getElementById('btnAutoPlay').innerText = 'Pausar';
+                timerAutoPlay = setInterval(() => {
+                    if (pasoActual < historialGlobal.length - 1) {
+                        irAlPaso(pasoActual + 1);
+                    } else {
+                        detenerAutoPlay();
+                    }
+                }, 600);
+            }
+        }
+
+        function detenerAutoPlay() {
+            if (timerAutoPlay) {
+                clearInterval(timerAutoPlay);
+                timerAutoPlay = null;
+                document.getElementById('btnAutoPlay').innerText = 'Reproducir Auto';
+            }
+        }
+
+        async function ejecutarTSP() {
+            detenerAutoPlay();
+            const n = parseInt(document.getElementById('numNodos').value);
+            if (n < 5 || n > 10) {
+                alert("El número de nodos debe estar estrictamente entre 5 y 10.");
+                return;
+            }
+
+            let nombres = [];
+            for (let i = 0; i < n; i++) {
+                let letra = String.fromCharCode(65 + i);
+                let txt = document.getElementById(`nombre_${i}`).value.trim();
+                if (!txt || txt === 'Aeropuerto') {
+                    nombres.push(letra);
+                } else {
+                    nombres.push(`${letra} (${txt})`);
+                }
+            }
+            nodosNombresGlobal = nombres;
+
+            let modo = document.getElementById('modoGeneracion').value;
+            let pesosManuales = {};
+
+            if (modo === 'manual') {
+                for (let i = 0; i < n; i++) {
+                    for (let j = i + 1; j < n; j++) {
+                        let val = parseInt(document.getElementById(`peso_${i}_${j}`).value);
+                        pesosManuales[`${i}_${j}`] = (isNaN(val) || val < 1) ? 1 : val;
+                    }
+                }
+            }
+
+            const respuesta = await fetch('/calcular', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ n: n, nombres: nombres, modo: modo, pesos: pesosManuales })
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.status !== 200) {
+                alert(resultado.error);
+                return;
+            }
+
+            datosResultado = resultado;
+            historialGlobal = resultado.historial;
+
+            // Ocultar asistente y mostrar resultados
+            document.querySelector('.wizard-header').style.display = 'none';
+            document.querySelector('.wizard-content').style.display = 'none';
+
+            // Llenar Tarjeta de Solución Final
+            document.getElementById('txtCiclosFinal').innerText = resultado.ciclos_totales.toLocaleString('es');
+            document.getElementById('txtDistanciaFinal').innerText = resultado.distancia_minima;
+
+            const cantOptimas = resultado.cantidad_optimas || 1;
+            const badge = document.getElementById('badgeTituloSolucion');
+            const cardCant = document.getElementById('cardCantOptimas');
+            const combo = document.getElementById('comboRutasOptimas');
+            const labelRuta = document.getElementById('labelRutaOptima');
+
+            rutaOptimaSeleccionadaIndice = 0;
+
+            if (cantOptimas > 1) {
+                badge.innerText = `Múltiples Soluciones Óptimas (${cantOptimas.toLocaleString('es')} rutas con distancia mínima)`;
+                cardCant.style.display = 'block';
+                document.getElementById('txtCantOptimasFinal').innerText = `${cantOptimas.toLocaleString('es')} rutas empatadas`;
+                labelRuta.innerText = 'Seleccionar Ruta Óptima a Visualizar:';
+                
+                combo.style.display = 'inline-block';
+                combo.innerHTML = '';
+                const limiteCombo = Math.min(cantOptimas, 100);
+                for (let i = 0; i < limiteCombo; i++) {
+                    combo.innerHTML += `<option value="${i}">Ruta Óptima #${i + 1}</option>`;
+                }
+            } else {
+                badge.innerText = 'Solución Óptima Única';
+                cardCant.style.display = 'none';
+                labelRuta.innerText = 'Recorrido del Ciclo Hamiltoniano Óptimo:';
+                combo.style.display = 'none';
+            }
+
+            const primeraOptima = (resultado.rutas_optimas && resultado.rutas_optimas.length) ? resultado.rutas_optimas[0] : resultado.ruta_optima;
+            document.getElementById('txtRutaOptimaFinal').innerText = primeraOptima;
+
+            // Renderizar Matriz de Adyacencia
+            renderizarMatriz(resultado.matriz, nombres);
+
+            // Configurar Slider de Pasos
+            const slider = document.getElementById('sliderPasos');
+            slider.max = historialGlobal.length - 1;
+            slider.value = 0;
+
+            // Historial de ciclos hamiltonianos con estructura en columnas limpias
+            let historialHTML = '';
+            resultado.historial.forEach((item, index) => {
+                const distVal = (item.distancia !== undefined) ? item.distancia : item.costo;
+                const esOptimo = (distVal === resultado.distancia_minima);
+                historialHTML += `
+                    <div class="item-ciclo ${esOptimo ? 'optimo' : ''}">
+                        <span class="item-num">#${index + 1}</span>
+                        <div class="item-ruta-wrapper">
+                            <span class="item-ciclo-texto">[${item.ciclo}]</span>
+                            ${esOptimo ? '<span class="badge-optimo-item">Ruta Óptima</span>' : ''}
+                        </div>
+                        <span class="item-costo-badge">Distancia: ${distVal}</span>
+                    </div>
+                `;
+            });
+            document.getElementById('txtHistorial').innerHTML = historialHTML;
+
+            document.getElementById('seccionResultado').style.display = 'block';
+
+            // Mostrar la ruta óptima directamente en el grafo
+            resaltarRutaOptimaActual();
+        }
+    </script>
+</body>
+
+</html>
